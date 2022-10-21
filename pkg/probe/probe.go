@@ -41,7 +41,7 @@ func NewHandler() *Handler {
 	return m
 }
 
-// ListenAndServe starts an http server
+// ListenAndServe starts a http server
 // that serves HTTP requests from an observer
 // (e.g. the kubelet).
 //
@@ -74,8 +74,15 @@ func (h *Handler) Listen() {
 	signal.Notify(sigC, os.Interrupt)
 	_ = <-sigC
 	log.Print("received interrupt from the system")
-	// stop responding that we're alive
-	// so we can cleanly shutdown
+	h.onShutdown()
+}
+
+// onShutdown is the series of actions taken
+// as we initiate shutdown. It's a separate
+// function so that we can privately test it.
+func (h *Handler) onShutdown() {
+	// stop responding that we're alive, so
+	// we can cleanly shut down
 	h.payload.Ok = false
 	h.payload.Status = StatusDown
 	h.payload.Detail = "shutdown signal received"
@@ -107,12 +114,15 @@ func (h *Handler) RegisterShutdownFunc(f func()) {
 	h.cLock.Unlock()
 }
 
-// RegisterShutdownServer adds an http server (or similar)
+// RegisterShutdownServer adds n http server (or similar)
 // that needs to be shutdown when the application is interrupted.
 func (h *Handler) RegisterShutdownServer(f ShutdownAble) {
 	h.cLock.Lock()
 	h.serverCallbacks = append(h.serverCallbacks, func() {
-		log.Printf("server shutdown: %s", f.Shutdown(context.TODO()))
+		// ask the server to shut down
+		if err := f.Shutdown(context.TODO()); err != nil {
+			log.Printf("error: shutting down server: %s", err)
+		}
 	})
 	h.cLock.Unlock()
 }

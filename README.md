@@ -35,7 +35,7 @@ func main() {
     // don't forget to call this in a goroutine
     // otherwise it will block.
     go func() {
-        probes.ListenAndServe(*healthPort)
+        probes.ListenAndServe(8081)
     }()
 }
 ```
