@@ -1,17 +1,18 @@
 # Go Probe Lib
 
 Go library for writing proper liveness/readiness probes.
+It's designed for use in a Kubernetes environment, however it is not bound to it.
 
 ## How it works
 
 This library is simple in design and uses the following flow:
 
-1. Allow the caller to register shutdown functions
-2. Wait for a `SIGTERM` signal from the OS
-3. Mark the `/readyz` endpoint as failed
+1. Allow the caller to register shutdown functions to gracefully stop the application
+2. Wait for an interrupt signal from the observer (e.g. Kubelet)
+3. Mark the `/readyz` endpoint as failed (so that Kubernetes removes this Pod from service)
 4. Call all shutdown functions (http servers are shutdown last)
-5. Mark the `/livez` endpoint as failed
-6. Wait for the observer (e.g. Kubelet) to send a `SIGKILL`
+5. Mark the `/livez` endpoint as failed (so that Kubernetes kills this Pod)
+6. Wait for the observer to send a kill signal or optionally exit after a specified duration
 
 ## Usage
 
@@ -31,6 +32,8 @@ import (
 )
 
 func main() {
+	// set a 30s deadline for killing the application
+	// if the kubelet hasn't done it already
 	probes := probe.NewHandler(time.Second * 30)
 	// register one or more functions
 	probes.RegisterShutdownFunc(func() {
