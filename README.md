@@ -26,6 +26,7 @@ go get github.com/djcass44/go-probe-lib
 package main
 
 import (
+	"context"
 	"github.com/djcass44/go-probe-lib/pkg/probe"
 	"os"
 	"time"
@@ -44,9 +45,24 @@ func main() {
 	// don't forget to call this in a goroutine
 	// otherwise it will block.
 	go func() {
-		if err := probes.ListenAndServe(8081); err != nil {
+		if err := probes.ListenAndServe(context.TODO(), 8081);
+		err != nil{
 			os.Exit(1)
 		}
 	}()
 }
+```
+
+### Logging
+
+This project uses the `go-logr` logging facade so that you can provide your own logger.
+To ensure logs are emitted correctly, make sure that the `context.Context` you provide contains your `LogSink`.
+
+```go
+// this bit will depend on the logging
+// solution you choose to use
+log := foobar.NewLogger()
+ctx := logr.NewContext(context.TODO(), log)
+...
+probes.ListenAndServe(ctx, 8081)
 ```
