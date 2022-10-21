@@ -9,9 +9,9 @@ This library is simple in design and uses the following flow:
 
 1. Allow the caller to register shutdown functions to gracefully stop the application
 2. Wait for an interrupt signal from the observer (e.g. Kubelet)
-3. Mark the `/readyz` endpoint as failed (so that Kubernetes removes this Pod from service)
+3. Mark the `/readyz` endpoint as failed (so that Kubernetes removes the Pod from service)
 4. Call all shutdown functions (http servers are shutdown last)
-5. Mark the `/livez` endpoint as failed (so that Kubernetes kills this Pod)
+5. Mark the `/livez` endpoint as failed (so that Kubernetes kills the Pod)
 6. Wait for the observer to send a kill signal or optionally exit after a specified duration
 
 ## Usage
