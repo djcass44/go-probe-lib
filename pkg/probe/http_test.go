@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,11 +15,7 @@ func TestHandler_Livez(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		h.Livez(w, req)
-
-		// todo replace with assertions
-		if w.Code/100 != 5 {
-			t.Fail()
-		}
+		assert.EqualValues(t, http.StatusServiceUnavailable, w.Code)
 	})
 	t.Run("alive handler returns ok status code", func(t *testing.T) {
 		h := new(Handler)
@@ -26,10 +23,6 @@ func TestHandler_Livez(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		h.Livez(w, req)
-
-		// todo replace with assertions
-		if w.Code != http.StatusOK {
-			t.Fail()
-		}
+		assert.EqualValues(t, http.StatusOK, w.Code)
 	})
 }

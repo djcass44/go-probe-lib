@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -23,10 +24,7 @@ func TestHandler_RegisterShutdownFunc(t *testing.T) {
 	h.onShutdown()
 
 	time.Sleep(time.Second)
-	// todo replace with assertion
-	if !called {
-		t.Fail()
-	}
+	assert.True(t, called)
 }
 
 func TestHandler_RegisterShutdownServer(t *testing.T) {
@@ -46,18 +44,12 @@ func TestHandler_RegisterShutdownServer(t *testing.T) {
 
 	// assert that the server is running
 	_, err := ts.Client().Get(ts.URL)
-	if err != nil {
-		t.Log(err)
-		t.Fail()
-	}
+	assert.NoError(t, err)
 
 	h.onShutdown()
 
 	time.Sleep(time.Second * 5)
-	// todo replace with assertion
 	_, err = ts.Client().Get(ts.URL)
 	t.Log(err)
-	if err == nil {
-		t.Fail()
-	}
+	assert.Error(t, err)
 }
