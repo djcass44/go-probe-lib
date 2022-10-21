@@ -1,9 +1,5 @@
 package probe
 
-type HttpHandler struct {
-	Payload Payload
-}
-
 type Payload struct {
 	Component
 	Components []Component `json:"components"`

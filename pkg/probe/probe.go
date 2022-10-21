@@ -10,10 +10,17 @@ import (
 )
 
 type Handler struct {
-	payload Payload
+	payload           Payload
 	shutdownCallbacks []func()
-	serverCallbacks []func()
-	cLock *sync.Mutex
+	serverCallbacks   []func()
+	cLock             *sync.Mutex
+
+	// isShutdown indicates that we're in the process
+	// of shutting down the application.
+	isShutdown bool
+	// isDead indicates that the application is fully
+	// shutdown and should be killed by the observer.
+	isDead bool
 }
 
 func NewHandler() *Handler {
@@ -47,6 +54,7 @@ func (h *Handler) Listen() {
 	h.payload.Ok = false
 	h.payload.Status = StatusDown
 	h.payload.Detail = "shutdown signal received"
+	h.isShutdown = true
 
 	// call all of our callbacks
 	callbacks := append(h.shutdownCallbacks, h.serverCallbacks...)
@@ -58,6 +66,7 @@ func (h *Handler) Listen() {
 		f()
 		log.Printf("finished shutdown hook %d/%d (%s elapsed - %s total)", i+1, numCallbacks, time.Since(s2), time.Since(start))
 	}
+	h.isDead = true
 }
 
 // RegisterShutdownFunc adds a user-provided function
