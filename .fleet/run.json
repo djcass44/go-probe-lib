@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+          "type": "command",
+          "name": "example",
+          "program": "go",
+          "workingDir": "./example/",
+          "args": ["run", "./main.go"],
+          "allowParallelRun": false,
+          "environment": {
+            "CGO_ENABLED": "0"
+          },
+        },
+
+    ]
+}

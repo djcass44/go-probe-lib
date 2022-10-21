@@ -55,7 +55,9 @@ func (h *Handler) ListenAndServe(port int) {
 		router := http.NewServeMux()
 		router.HandleFunc("/livez", h.Livez)
 		router.HandleFunc("/readyz", h.Readyz)
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
+		addr := fmt.Sprintf(":%d", port)
+		log.Printf("starting health server on interface %s", addr)
+		if err := http.ListenAndServe(addr, router); err != nil {
 			log.Printf("error: healthz server exited: %s", err)
 			return
 		}
