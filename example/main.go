@@ -13,7 +13,8 @@ import (
 
 func main() {
 	port := flag.Int("port", 8080, "http port to run on (default: 8080)")
-	assetDir := flag.String("asset-dir", "./assets", "static asset folder to serve")
+	healthPort := flag.Int("health-port", 8081, "http port for health checks to run on (default: 8081)")
+	assetDir := flag.String("asset-dir", "./assets", "static asset folder to serve (default: ./assets)")
 
 	flag.Parse()
 
@@ -26,9 +27,6 @@ func main() {
 		log.Printf("%s %s %s", r.Method, r.URL.Path, r.UserAgent())
 		fs.ServeHTTP(w, r)
 	})
-	// add the probes (this is the important bit)
-	router.HandleFunc("/healthz/readyz", probes.Readyz)
-	router.HandleFunc("/healthz/livez", probes.Livez)
 
 	addr := fmt.Sprintf(":%d", *port)
 	srv := &http.Server{
@@ -42,6 +40,9 @@ func main() {
 		time.Sleep(time.Second * 10)
 		log.Print("cya!")
 	})
+	go func() {
+		probes.ListenAndServe(*healthPort)
+	}()
 
 	// start the http server in the
 	// background

@@ -2,7 +2,9 @@ package probe
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -35,9 +37,30 @@ func NewHandler() *Handler {
 		},
 		cLock: &sync.Mutex{},
 	}
-	go m.Listen()
 
 	return m
+}
+
+// ListenAndServe starts an http server
+// that serves HTTP requests from an observer
+// (e.g. the kubelet).
+//
+// This server should only be used for health
+// information and is only shutdown
+// when the application exits.
+func (h *Handler) ListenAndServe(port int) {
+	// start the http server in the background
+	// on the user-specified port
+	go func() {
+		router := http.NewServeMux()
+		router.HandleFunc("/livez", h.Livez)
+		router.HandleFunc("/readyz", h.Readyz)
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), router); err != nil {
+			log.Printf("error: healthz server exited: %s", err)
+			return
+		}
+	}()
+	h.Listen()
 }
 
 // Listen waits for SIGTERM and indicates
