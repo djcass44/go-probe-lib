@@ -32,6 +32,12 @@ type Handler struct {
 	killDuration time.Duration
 }
 
+// NewHandler creates a new instance of Handler
+// with a specified timeout. A timeout of 0
+// means that the application will not exit
+// until the observer sends a kill signal.
+//
+// The handler requires starting with ListenAndServe
 func NewHandler(timeout time.Duration) *Handler {
 	m := &Handler{
 		payload: Payload{
@@ -55,7 +61,7 @@ func NewHandler(timeout time.Duration) *Handler {
 //
 // This server should only be used for health
 // information and is only shutdown
-// when the application exits.
+// when the application exits (i.e. not gracefully).
 func (h *Handler) ListenAndServe(ctx context.Context, port int) error {
 	log := logr.FromContextOrDiscard(ctx)
 	// start the http server in the background
@@ -77,6 +83,10 @@ func (h *Handler) ListenAndServe(ctx context.Context, port int) error {
 // Listen waits for SIGTERM and indicates
 // to an observer that new requests
 // shouldn't be sent to this instance.
+//
+// Only call this if you're managing the HTTP
+// components yourself. Generally you should
+// just use ListenAndServe
 func (h *Handler) Listen(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(2).Info("starting readiness listener")
@@ -132,7 +142,7 @@ func (h *Handler) RegisterShutdownFunc(f func()) {
 	h.cLock.Unlock()
 }
 
-// RegisterShutdownServer adds n http server (or similar)
+// RegisterShutdownServer adds a http server (or similar)
 // that needs to be shutdown when the application is interrupted.
 func (h *Handler) RegisterShutdownServer(ctx context.Context, f ShutdownAble) {
 	log := logr.FromContextOrDiscard(ctx)
