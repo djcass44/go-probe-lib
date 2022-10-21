@@ -17,8 +17,12 @@ func main() {
 	flag.Parse()
 
 	// configure routing
+	fs := http.FileServer(http.FS(os.DirFS(*assetDir)))
 	router := http.NewServeMux()
-	router.Handle("/", http.FileServer(http.FS(os.DirFS(*assetDir))))
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.Method, r.URL.Path, r.UserAgent())
+		fs.ServeHTTP(w, r)
+	})
 
 	// start the http server in the
 	// background
