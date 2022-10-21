@@ -26,3 +26,36 @@ func TestHandler_Livez(t *testing.T) {
 		assert.EqualValues(t, http.StatusOK, w.Code)
 	})
 }
+
+func TestHandler_writeJSON(t *testing.T) {
+	h := new(Handler)
+
+	var cases = []struct {
+		name    string
+		payload any
+		out     string
+	}{
+		{
+			"payloads that cant be marshalled return an error",
+			make(chan struct{}),
+			messageGenericError,
+		},
+		{
+			"standard objects can be marshalled",
+			struct {
+				Status string `json:"status"`
+			}{"up"},
+			`{"status": "up"}`,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			h.writeJSON(w, tt.payload, true)
+
+			resp := w.Body.String()
+			assert.JSONEq(t, tt.out, resp)
+		})
+	}
+}

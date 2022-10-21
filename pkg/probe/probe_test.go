@@ -48,7 +48,7 @@ func TestHandler_RegisterShutdownServer(t *testing.T) {
 
 	h.onShutdown()
 
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Millisecond * 100)
 	_, err = ts.Client().Get(ts.URL)
 	t.Log(err)
 	assert.Error(t, err)

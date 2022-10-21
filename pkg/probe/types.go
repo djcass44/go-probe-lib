@@ -16,3 +16,5 @@ const (
 	StatusDown    = "down"
 	StatusUnknown = "unknown"
 )
+
+const messageGenericError = `{"status": "internal server error", "ok": false}`

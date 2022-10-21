@@ -23,7 +23,7 @@ func (*Handler) writeJSON(w http.ResponseWriter, payload any, ok bool) {
 		// manually write a JSON message
 		log.Printf("error: failed to convert response to json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"status": "internal server error", "ok": false}`))
+		_, _ = w.Write([]byte(messageGenericError))
 		return
 	}
 	// if we're not ok, tell the observer (probably k8s)
