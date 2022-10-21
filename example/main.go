@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/djcass44/go-probe-lib/pkg/readiness"
+	"github.com/djcass44/go-probe-lib/pkg/probe"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
+	"time"
 )
 
 func main() {
@@ -16,6 +16,8 @@ func main() {
 	assetDir := flag.String("asset-dir", "./assets", "static asset folder to serve")
 
 	flag.Parse()
+
+	probes := probe.NewHandler()
 
 	// configure routing
 	fs := http.FileServer(http.FS(os.DirFS(*assetDir)))
@@ -25,18 +27,31 @@ func main() {
 		fs.ServeHTTP(w, r)
 	})
 	// add the probes (this is the important bit)
-	router.Handle("/healthz/readyz", readiness.NewManager())
+	router.HandleFunc("/healthz/readyz", probes.Readyz)
+	router.HandleFunc("/healthz/livez", probes.Livez)
+
+	addr := fmt.Sprintf(":%d", *port)
+	srv := &http.Server{
+		Addr: addr,
+		Handler: router,
+	}
+	// register shutdown functions
+	probes.RegisterShutdownServer(srv)
+	probes.RegisterShutdownFunc(func() {
+		log.Print("I'm a slow shutdown func!!")
+		time.Sleep(time.Second * 10)
+		log.Print("cya!")
+	})
 
 	// start the http server in the
 	// background
 	go func() {
-		addr := fmt.Sprintf(":%d", *port)
 		log.Printf("starting server on interface %s", addr)
-		log.Fatal(http.ListenAndServe(addr, router))
+		log.Printf("error: http server exited: %s", srv.ListenAndServe())
 	}()
 	// wait for a signal
 	sigC := make(chan os.Signal, 1)
-	signal.Notify(sigC, syscall.SIGINT)
+	signal.Notify(sigC, os.Kill)
 	sig := <-sigC
 	log.Printf("received shutdown signal (%s)", sig)
 }
