@@ -3,7 +3,7 @@ package probe
 import (
 	"context"
 	"fmt"
-	"log"
+	"github.com/go-logr/logr"
 	"net/http"
 	"os"
 	"os/signal"
@@ -56,7 +56,8 @@ func NewHandler(timeout time.Duration) *Handler {
 // This server should only be used for health
 // information and is only shutdown
 // when the application exits.
-func (h *Handler) ListenAndServe(port int) error {
+func (h *Handler) ListenAndServe(ctx context.Context, port int) error {
+	log := logr.FromContextOrDiscard(ctx)
 	// start the http server in the background
 	// on the user-specified port
 	go func() {
@@ -64,31 +65,34 @@ func (h *Handler) ListenAndServe(port int) error {
 		router.HandleFunc("/livez", h.Livez)
 		router.HandleFunc("/readyz", h.Readyz)
 		addr := fmt.Sprintf(":%d", port)
-		log.Printf("starting health server on interface %s", addr)
+		log.V(2).Info("starting healthz server", "Interface", addr)
 		if err := http.ListenAndServe(addr, router); err != nil {
-			log.Printf("error: healthz server exited: %s", err)
+			log.Error(err, "healthz server exited")
 			return
 		}
 	}()
-	return h.Listen()
+	return h.Listen(ctx)
 }
 
 // Listen waits for SIGTERM and indicates
 // to an observer that new requests
 // shouldn't be sent to this instance.
-func (h *Handler) Listen() error {
-	log.Print("starting readiness listener")
+func (h *Handler) Listen(ctx context.Context) error {
+	log := logr.FromContextOrDiscard(ctx)
+	log.V(2).Info("starting readiness listener")
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, os.Interrupt)
-	_ = <-sigC
-	log.Print("received interrupt from the system")
-	return h.onShutdown()
+	sig := <-sigC
+	log.V(1).Info("received interrupt from the system", "Signal", sig)
+	log.Info("shutting down due to receiving system interrupt")
+	return h.onShutdown(ctx)
 }
 
 // onShutdown is the series of actions taken
 // as we initiate shutdown. It's a separate
 // function so that we can privately test it.
-func (h *Handler) onShutdown() error {
+func (h *Handler) onShutdown(ctx context.Context) error {
+	log := logr.FromContextOrDiscard(ctx)
 	// stop responding that we're alive, so
 	// we can cleanly shut down
 	h.payload.Ok = false
@@ -102,14 +106,14 @@ func (h *Handler) onShutdown() error {
 	start := time.Now()
 	for i, f := range callbacks {
 		s2 := time.Now()
-		log.Printf("starting shutdown hook %d/%d (%s elapsed)", i+1, numCallbacks, time.Since(start))
+		log.V(4).Info("starting shutdown hook", "Current", i+1, "Total", numCallbacks, "Elapsed", time.Since(start))
 		f()
-		log.Printf("finished shutdown hook %d/%d (%s elapsed - %s total)", i+1, numCallbacks, time.Since(s2), time.Since(start))
+		log.V(4).Info("finished shutdown hook", "Current", i+1, "Total", numCallbacks, "Elapsed", time.Since(s2), "TotalElapsed", time.Since(start))
 	}
 	h.isDead = true
 	if h.killDuration > 0 {
 		time.Sleep(h.killDuration)
-		log.Printf("exiting due to shutdown timeout (%s)", h.killDuration)
+		log.V(3).Info("exiting due to shutdown timeout", "Duration", h.killDuration)
 		return ErrDeadlineExceeded
 	}
 	return nil
@@ -130,12 +134,13 @@ func (h *Handler) RegisterShutdownFunc(f func()) {
 
 // RegisterShutdownServer adds n http server (or similar)
 // that needs to be shutdown when the application is interrupted.
-func (h *Handler) RegisterShutdownServer(f ShutdownAble) {
+func (h *Handler) RegisterShutdownServer(ctx context.Context, f ShutdownAble) {
+	log := logr.FromContextOrDiscard(ctx)
 	h.cLock.Lock()
 	h.serverCallbacks = append(h.serverCallbacks, func() {
 		// ask the server to shut down
-		if err := f.Shutdown(context.TODO()); err != nil {
-			log.Printf("error: shutting down server: %s", err)
+		if err := f.Shutdown(ctx); err != nil {
+			log.V(4).Error(err, "shutting down server")
 		}
 	})
 	h.cLock.Unlock()

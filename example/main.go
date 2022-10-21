@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/djcass44/go-probe-lib/pkg/probe"
@@ -19,6 +20,8 @@ func main() {
 	flag.Parse()
 
 	probes := probe.NewHandler(time.Second)
+	// todo create a context that has proper logging
+	ctx := context.TODO()
 
 	// configure routing
 	fs := http.FileServer(http.FS(os.DirFS(*assetDir)))
@@ -34,14 +37,14 @@ func main() {
 		Handler: router,
 	}
 	// register shutdown functions
-	probes.RegisterShutdownServer(srv)
+	probes.RegisterShutdownServer(ctx, srv)
 	probes.RegisterShutdownFunc(func() {
 		log.Print("I'm a slow shutdown func!!")
 		time.Sleep(time.Second * 10)
 		log.Print("cya!")
 	})
 	go func() {
-		if err := probes.ListenAndServe(*healthPort); err != nil {
+		if err := probes.ListenAndServe(ctx, *healthPort); err != nil {
 			os.Exit(1)
 		}
 	}()
