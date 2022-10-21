@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/djcass44/go-probe-lib/pkg/readiness"
 	"log"
 	"net/http"
 	"os"
@@ -23,6 +24,8 @@ func main() {
 		log.Printf("%s %s %s", r.Method, r.URL.Path, r.UserAgent())
 		fs.ServeHTTP(w, r)
 	})
+	// add the probes (this is the important bit)
+	router.Handle("/healthz/readyz", readiness.NewManager())
 
 	// start the http server in the
 	// background
@@ -33,7 +36,7 @@ func main() {
 	}()
 	// wait for a signal
 	sigC := make(chan os.Signal, 1)
-	signal.Notify(sigC, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(sigC, syscall.SIGINT)
 	sig := <-sigC
 	log.Printf("received shutdown signal (%s)", sig)
 }
