@@ -62,6 +62,10 @@ func NewHandler(timeout time.Duration) *Handler {
 // This server should only be used for health
 // information and is only shutdown
 // when the application exits (i.e. not gracefully).
+//
+// Returns an error if the specified deadline has exceeded
+// and indicates that the caller (you) should exit the application
+// using os.Exit
 func (h *Handler) ListenAndServe(ctx context.Context, port int) error {
 	log := logr.FromContextOrDiscard(ctx)
 	// start the http server in the background
@@ -121,6 +125,8 @@ func (h *Handler) onShutdown(ctx context.Context) error {
 		log.V(4).Info("finished shutdown hook", "Current", i+1, "Total", numCallbacks, "Elapsed", time.Since(s2), "TotalElapsed", time.Since(start))
 	}
 	h.isDead = true
+	// if requested, wait for the deadline
+	// and return an error.
 	if h.killDuration > 0 {
 		time.Sleep(h.killDuration)
 		log.V(3).Info("exiting due to shutdown timeout", "Duration", h.killDuration)
@@ -156,6 +162,11 @@ func (h *Handler) RegisterShutdownServer(ctx context.Context, f ShutdownAble) {
 	h.cLock.Unlock()
 }
 
+// ShutdownAble describes any struct that implements
+// the Shutdown function that http.Server uses.
+//
+// It only exists to ensure we're not bound to the
+// net/http implementation of the HTTP server.
 type ShutdownAble interface {
 	Shutdown(context.Context) error
 }
