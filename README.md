@@ -24,18 +24,26 @@ go get github.com/djcass44/go-probe-lib
 ```go
 package main
 
+import (
+	"github.com/djcass44/go-probe-lib/pkg/probe"
+	"os"
+	"time"
+)
+
 func main() {
-    probes := probe.NewHandler()
-    // register one or more functions
-    probes.RegisterShutdownFunc(func() {
-        log.Print("I'm a slow shutdown func!!")
-        time.Sleep(time.Second * 10)
-        log.Print("cya!")
-    })
-    // don't forget to call this in a goroutine
-    // otherwise it will block.
-    go func() {
-        probes.ListenAndServe(8081)
-    }()
+	probes := probe.NewHandler(time.Second * 30)
+	// register one or more functions
+	probes.RegisterShutdownFunc(func() {
+		log.Print("I'm a slow shutdown func!!")
+		time.Sleep(time.Second * 10)
+		log.Print("cya!")
+	})
+	// don't forget to call this in a goroutine
+	// otherwise it will block.
+	go func() {
+		if err := probes.ListenAndServe(8081); err != nil {
+			os.Exit(1)
+		}
+	}()
 }
 ```

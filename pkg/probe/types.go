@@ -1,5 +1,7 @@
 package probe
 
+import "errors"
+
 type Payload struct {
 	Component
 	Components []Component `json:"components"`
@@ -18,3 +20,5 @@ const (
 )
 
 const messageGenericError = `{"status": "internal server error", "ok": false}`
+
+var ErrDeadlineExceeded = errors.New("observer-initiated shutdown deadline exceeded")

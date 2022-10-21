@@ -23,9 +23,16 @@ type Handler struct {
 	// isDead indicates that the application is fully
 	// shutdown and should be killed by the observer.
 	isDead bool
+
+	// killDuration is the time after which
+	// we should exit the application if the
+	// observer doesn't do it for us.
+	// 0 means we won't exit until the
+	// observer sends the kill signal
+	killDuration time.Duration
 }
 
-func NewHandler() *Handler {
+func NewHandler(timeout time.Duration) *Handler {
 	m := &Handler{
 		payload: Payload{
 			Component: Component{
@@ -35,7 +42,8 @@ func NewHandler() *Handler {
 			},
 			Components: []Component{},
 		},
-		cLock: &sync.Mutex{},
+		cLock:        &sync.Mutex{},
+		killDuration: timeout,
 	}
 
 	return m
@@ -48,7 +56,7 @@ func NewHandler() *Handler {
 // This server should only be used for health
 // information and is only shutdown
 // when the application exits.
-func (h *Handler) ListenAndServe(port int) {
+func (h *Handler) ListenAndServe(port int) error {
 	// start the http server in the background
 	// on the user-specified port
 	go func() {
@@ -62,25 +70,25 @@ func (h *Handler) ListenAndServe(port int) {
 			return
 		}
 	}()
-	h.Listen()
+	return h.Listen()
 }
 
 // Listen waits for SIGTERM and indicates
 // to an observer that new requests
 // shouldn't be sent to this instance.
-func (h *Handler) Listen() {
+func (h *Handler) Listen() error {
 	log.Print("starting readiness listener")
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, os.Interrupt)
 	_ = <-sigC
 	log.Print("received interrupt from the system")
-	h.onShutdown()
+	return h.onShutdown()
 }
 
 // onShutdown is the series of actions taken
 // as we initiate shutdown. It's a separate
 // function so that we can privately test it.
-func (h *Handler) onShutdown() {
+func (h *Handler) onShutdown() error {
 	// stop responding that we're alive, so
 	// we can cleanly shut down
 	h.payload.Ok = false
@@ -99,6 +107,12 @@ func (h *Handler) onShutdown() {
 		log.Printf("finished shutdown hook %d/%d (%s elapsed - %s total)", i+1, numCallbacks, time.Since(s2), time.Since(start))
 	}
 	h.isDead = true
+	if h.killDuration > 0 {
+		time.Sleep(h.killDuration)
+		log.Printf("exiting due to shutdown timeout (%s)", h.killDuration)
+		return ErrDeadlineExceeded
+	}
+	return nil
 }
 
 // RegisterShutdownFunc adds a user-provided function

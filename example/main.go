@@ -18,7 +18,7 @@ func main() {
 
 	flag.Parse()
 
-	probes := probe.NewHandler()
+	probes := probe.NewHandler(time.Second)
 
 	// configure routing
 	fs := http.FileServer(http.FS(os.DirFS(*assetDir)))
@@ -30,7 +30,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", *port)
 	srv := &http.Server{
-		Addr: addr,
+		Addr:    addr,
 		Handler: router,
 	}
 	// register shutdown functions
@@ -41,7 +41,9 @@ func main() {
 		log.Print("cya!")
 	})
 	go func() {
-		probes.ListenAndServe(*healthPort)
+		if err := probes.ListenAndServe(*healthPort); err != nil {
+			os.Exit(1)
+		}
 	}()
 
 	// start the http server in the
