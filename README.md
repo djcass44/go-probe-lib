@@ -28,6 +28,7 @@ package main
 import (
 	"context"
 	"github.com/djcass44/go-probe-lib/pkg/probe"
+	"log"
 	"os"
 	"time"
 )
@@ -46,7 +47,7 @@ func main() {
 	// otherwise it will block.
 	go func() {
 		if err := probes.ListenAndServe(context.TODO(), 8081);
-		err != nil{
+			err != nil {
 			os.Exit(1)
 		}
 	}()
