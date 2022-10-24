@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/djcass44/go-probe-lib/pkg/probe"
-	"log"
+	"github.com/djcass44/go-utils/logging"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,14 +22,16 @@ func main() {
 	flag.Parse()
 
 	probes := probe.NewHandler(time.Second)
-	// todo create a context that has proper logging
-	ctx := context.TODO()
+	zc := zap.NewProductionConfig()
+	zc.Level = zap.NewAtomicLevelAt(zapcore.Level(-10))
+
+	log, ctx := logging.NewZap(context.TODO(), zc)
 
 	// configure routing
 	fs := http.FileServer(http.FS(os.DirFS(*assetDir)))
 	router := http.NewServeMux()
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s", r.Method, r.URL.Path, r.UserAgent())
+		log.Info(fmt.Sprintf("%s %s %s", r.Method, r.URL.Path, r.UserAgent()))
 		fs.ServeHTTP(w, r)
 	})
 
@@ -39,9 +43,9 @@ func main() {
 	// register shutdown functions
 	probes.RegisterShutdownServer(ctx, srv)
 	probes.RegisterShutdownFunc(func() {
-		log.Print("I'm a slow shutdown func!!")
+		log.Info("I'm a slow shutdown func!!")
 		time.Sleep(time.Second * 10)
-		log.Print("cya!")
+		log.Info("cya!")
 	})
 	go func() {
 		if err := probes.ListenAndServe(ctx, *healthPort); err != nil {
@@ -52,12 +56,12 @@ func main() {
 	// start the http server in the
 	// background
 	go func() {
-		log.Printf("starting server on interface %s", addr)
-		log.Printf("error: http server exited: %s", srv.ListenAndServe())
+		log.Info("starting server", "Interface", addr)
+		log.Error(srv.ListenAndServe(), "http server exited")
 	}()
 	// wait for a signal
 	sigC := make(chan os.Signal, 1)
 	signal.Notify(sigC, os.Kill)
 	sig := <-sigC
-	log.Printf("received shutdown signal (%s)", sig)
+	log.Info("received shutdown signal", "Signal", sig)
 }

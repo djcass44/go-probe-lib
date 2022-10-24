@@ -1,27 +1,29 @@
 package probe
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"github.com/go-logr/logr"
 	"net/http"
 )
 
-func (h *Handler) Livez(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, &Component{Ok: !h.isDead}, !h.isDead)
+func (h *Handler) Livez(w http.ResponseWriter, r *http.Request) {
+	h.writeJSON(r.Context(), w, &Component{Ok: !h.isDead}, !h.isDead)
 }
 
-func (h *Handler) Readyz(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, h.payload, h.payload.Ok)
+func (h *Handler) Readyz(w http.ResponseWriter, r *http.Request) {
+	h.writeJSON(r.Context(), w, h.payload, h.payload.Ok)
 }
 
-func (*Handler) writeJSON(w http.ResponseWriter, payload any, ok bool) {
+func (*Handler) writeJSON(ctx context.Context, w http.ResponseWriter, payload any, ok bool) {
+	log := logr.FromContextOrDiscard(ctx)
 	w.Header().Set("Content-Type", "application/json")
 	// convert the data to JSON
 	data, err := json.Marshal(payload)
 	if err != nil {
 		// if we couldn't convert it, then
 		// manually write a JSON message
-		log.Printf("error: failed to convert response to json")
+		log.Error(err, "failed to convert response to json")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(messageGenericError))
 		return

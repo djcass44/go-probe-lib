@@ -1,6 +1,9 @@
 package probe
 
 import (
+	"context"
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +31,7 @@ func TestHandler_Livez(t *testing.T) {
 }
 
 func TestHandler_writeJSON(t *testing.T) {
+	ctx := logr.NewContext(context.TODO(), testr.NewWithOptions(t, testr.Options{Verbosity: 10}))
 	h := new(Handler)
 
 	var cases = []struct {
@@ -52,7 +56,7 @@ func TestHandler_writeJSON(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			h.writeJSON(w, tt.payload, true)
+			h.writeJSON(ctx, w, tt.payload, true)
 
 			resp := w.Body.String()
 			assert.JSONEq(t, tt.out, resp)
