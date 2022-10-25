@@ -119,6 +119,12 @@ func (h *Handler) Listen(ctx context.Context) error {
 	return h.onShutdown(ctx)
 }
 
+// Shutdown allows the caller to manually request the application
+// to shut down. Generally this should only be used for testing.
+func (h *Handler) Shutdown(ctx context.Context) error {
+	return h.onShutdown(ctx)
+}
+
 // onShutdown is the series of actions taken
 // as we initiate shutdown. It's a separate
 // function so that we can privately test it.
