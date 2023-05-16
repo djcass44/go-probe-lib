@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -112,7 +113,7 @@ func (h *Handler) Listen(ctx context.Context) error {
 	log := logr.FromContextOrDiscard(ctx)
 	log.V(2).Info("starting readiness listener")
 	sigC := make(chan os.Signal, 1)
-	signal.Notify(sigC, os.Interrupt)
+	signal.Notify(sigC, os.Interrupt, syscall.SIGTERM)
 	sig := <-sigC
 	log.V(1).Info("received interrupt from the system", "Signal", sig)
 	log.Info("shutting down due to receiving system interrupt")

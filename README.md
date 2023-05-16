@@ -8,7 +8,7 @@ It's designed for use in a Kubernetes environment, however it is not bound to it
 This library is simple in design and uses the following flow:
 
 1. Allow the caller to register shutdown functions to gracefully stop the application
-2. Wait for an interrupt signal from the observer (e.g. Kubelet)
+2. Wait for an interrupt/terminate signal from the observer (e.g. Kubelet)
 3. Mark the `/readyz` endpoint as failed (so that Kubernetes removes the Pod from service)
 4. Call all shutdown functions (http servers are shutdown last)
 5. Mark the `/livez` endpoint as failed (so that Kubernetes kills the Pod)
@@ -60,10 +60,14 @@ This project uses the `go-logr` logging facade so that you can provide your own 
 To ensure logs are emitted correctly, make sure that the `context.Context` you provide contains your `LogSink`.
 
 ```go
-// this bit will depend on the logging
-// solution you choose to use
-log := foobar.NewLogger()
-ctx := logr.NewContext(context.TODO(), log)
-...
-probes.ListenAndServe(ctx, 8081)
+package main
+
+func main() {
+	// this bit will depend on the logging
+	// solution you choose to use
+	log := foobar.NewLogger()
+    ctx := logr.NewContext(context.TODO(), log)
+    // ...
+    probes.ListenAndServe(ctx, 8081)
+}
 ```
