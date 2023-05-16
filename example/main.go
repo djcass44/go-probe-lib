@@ -54,8 +54,9 @@ func main() {
 
 	addr := fmt.Sprintf(":%d", *port)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: time.Second * 3,
 	}
 	// register shutdown functions
 	probes.RegisterShutdownServer(ctx, srv)

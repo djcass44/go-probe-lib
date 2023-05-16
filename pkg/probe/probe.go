@@ -94,7 +94,14 @@ func (h *Handler) ListenAndServe(ctx context.Context, port int) error {
 		router.HandleFunc("/readyz", h.Readyz)
 		addr := fmt.Sprintf(":%d", port)
 		log.V(2).Info("starting healthz server", "Interface", addr)
-		if err := http.ListenAndServe(addr, router); err != nil {
+		// define a server, so we can set timeouts and
+		// avoid G114
+		srv := &http.Server{
+			Addr:              addr,
+			ReadHeaderTimeout: time.Second * 3,
+			Handler:           router,
+		}
+		if err := srv.ListenAndServe(); err != nil {
 			log.Error(err, "healthz server exited")
 			return
 		}
